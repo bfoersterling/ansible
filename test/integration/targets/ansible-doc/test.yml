@@ -1,3 +1,34 @@
+# testing without ANSIBLE_NOCOLOR
+- hosts: localhost
+  gather_facts: no
+  environment:
+    ANSIBLE_LIBRARY: "{{ playbook_dir }}/library"
+    ANSIBLE_DEPRECATION_WARNINGS: 1
+    ANSIBLE_DOC_FRAGMENT_PLUGINS: "{{ playbook_dir }}/doc_fragments"
+  vars:
+    # avoid header that has full path and won't work across random paths for tests
+    actual_output_clean: '{{ actual_output.splitlines()[1:] }}'
+    expected_output_clean: '{{ expected_output.splitlines()[1:] }}'
+
+  tasks:
+    - name: Create temporary file
+      ansible.builtin.tempfile:
+        state: file
+      register: temp_file
+
+    - name: Redirect stdout and stderr to file
+      ansible.builtin.shell: |
+        ansible-doc test_docs &> {{ temp_file.path }}
+      register: redirect_to_file
+
+    - name: Assert Redirect To File
+      assert:
+        that:
+          - actual_output == expected_output
+      vars:
+        actual_output: "{{ lookup('file', temp_file.path) }}"
+        expected_output: "{{ lookup('file', 'test_docs_redirect.output') }}"
+
 - hosts: localhost
   gather_facts: no
   environment:
