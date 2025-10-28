@@ -29,6 +29,11 @@
         actual_output: "{{ lookup('file', temp_file.path) }}"
         expected_output: "{{ lookup('file', 'test_docs_redirect.output') }}"
 
+    - name: Remove tempfile
+      ansible.builtin.file:
+        path: "{{ temp_file.path }}"
+        state: absent
+
 - hosts: localhost
   gather_facts: no
   environment:
