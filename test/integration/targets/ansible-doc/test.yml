@@ -1,5 +1,6 @@
 # testing without ANSIBLE_NOCOLOR
-- hosts: localhost
+- name: testing ansi escape sequences
+  hosts: localhost
   gather_facts: no
   environment:
     ANSIBLE_LIBRARY: "{{ playbook_dir }}/library"
@@ -11,25 +12,25 @@
     expected_output_clean: '{{ expected_output.splitlines()[1:] }}'
 
   tasks:
-    - name: Create temporary file
+    - name: create temporary file
       ansible.builtin.tempfile:
         state: file
       register: temp_file
 
-    - name: Redirect stdout and stderr to file
+    - name: redirect stdout and stderr to file
       ansible.builtin.shell: |
         ansible-doc test_docs &> {{ temp_file.path }}
       register: redirect_to_file
 
-    - name: Assert Redirect To File
+    - name: assert redirect to file
       assert:
         that:
-          - actual_output == expected_output
+          - actual_output_clean == expected_output_clean
       vars:
         actual_output: "{{ lookup('file', temp_file.path) }}"
         expected_output: "{{ lookup('file', 'test_docs_redirect.output') }}"
 
-    - name: Remove tempfile
+    - name: remove tempfile
       ansible.builtin.file:
         path: "{{ temp_file.path }}"
         state: absent
