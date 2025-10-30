@@ -10,36 +10,16 @@
     ANSIBLE_LIBRARY: "{{ playbook_dir }}/library"
 
   tasks:
-    - name: show env
-      ansible.builtin.shell: |
-        env | grep "ANSIBLE"
-
-    - name: show os
-      ansible.builtin.shell: |
-        cat /etc/os-release
-
-    - name: where are we
-      ansible.builtin.shell: |
-        pwd
-
     - name: create temporary file
       ansible.builtin.tempfile:
-        path: "{{ playbook_dir }}"
         state: file
       register: temp_file
 
     - name: redirect stdout and stderr to file
       ansible.builtin.shell: |
         ansible-doc test_docs &> {{ temp_file.path }}
-      register: redirect_to_file
-
-    - name: print stdout of redirect_to_file
-      ansible.builtin.debug:
-        msg: "{{ redirect_to_file.stdout }}"
-
-    - name: print file content
-      ansible.builtin.shell: |
-        cat {{ temp_file.path }}
+      args:
+        executable: "/usr/bin/bash"
 
     - name: assert redirect to file
       assert:
@@ -49,8 +29,7 @@
           actual_output[0][:20]: {{ actual_output[0][:20] }}
           actual_output: {{ actual_output }}
       vars:
-        #actual_output: "{{ lookup('file', temp_file.path).splitlines() }}"
-        actual_output: "{{ redirect_to_file.stdout_lines }}"
+        actual_output: "{{ lookup('file', temp_file.path).splitlines() }}"
 
     - name: remove tempfile
       ansible.builtin.file:
