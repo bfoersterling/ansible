@@ -10,3 +10,8 @@ test_unit:
 test_int:
 	source ../../../../hacking/env-setup && \
 		ansible-test integration --docker -v -- ansible-doc
+
+[working-directory("test/integration/targets/ansible-doc")]
+test_int_local:
+	source ../../../../hacking/env-setup && \
+		ansible-test integration -v -- ansible-doc
