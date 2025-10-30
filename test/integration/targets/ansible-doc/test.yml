@@ -3,16 +3,28 @@
   hosts: localhost
   gather_facts: no
   environment:
-    ANSIBLE_LIBRARY: "{{ playbook_dir }}/library"
-    ANSIBLE_DEPRECATION_WARNINGS: 1
+    ANSIBLE_DEPRECATION_WARNINGS: 0
+    ANSIBLE_DEVEL_WARNING: 0
     ANSIBLE_DOC_FRAGMENT_PLUGINS: "{{ playbook_dir }}/doc_fragments"
-  vars:
-    # avoid header that has full path and won't work across random paths for tests
-    actual_output_clean: '{{ actual_output.splitlines()[1:] }}'
+    ANSIBLE_FORCE_COLOR: 0
+    ANSIBLE_LIBRARY: "{{ playbook_dir }}/library"
 
   tasks:
+    - name: show env
+      ansible.builtin.shell: |
+        env | grep "ANSIBLE"
+
+    - name: show os
+      ansible.builtin.shell: |
+        cat /etc/os-release
+
+    - name: where are we
+      ansible.builtin.shell: |
+        pwd
+
     - name: create temporary file
       ansible.builtin.tempfile:
+        path: "{{ playbook_dir }}"
         state: file
       register: temp_file
 
@@ -21,14 +33,24 @@
         ansible-doc test_docs &> {{ temp_file.path }}
       register: redirect_to_file
 
+    - name: print stdout of redirect_to_file
+      ansible.builtin.debug:
+        msg: "{{ redirect_to_file.stdout }}"
+
+    - name: print file content
+      ansible.builtin.shell: |
+        cat {{ temp_file.path }}
+
     - name: assert redirect to file
       assert:
         that:
-          - actual_output_clean[0][:20] == "> MODULE test_docs ("
+          - actual_output[0][:20] == "> MODULE test_docs ("
         fail_msg: |
-          actual_output_clean[0][:20]: {{ actual_output_clean[0][:20] }}
+          actual_output[0][:20]: {{ actual_output[0][:20] }}
+          actual_output: {{ actual_output }}
       vars:
-        actual_output: "{{ lookup('file', temp_file.path) }}"
+        #actual_output: "{{ lookup('file', temp_file.path).splitlines() }}"
+        actual_output: "{{ redirect_to_file.stdout_lines }}"
 
     - name: remove tempfile
       ansible.builtin.file:
