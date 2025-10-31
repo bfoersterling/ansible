@@ -1,14 +1,14 @@
-# testing without ANSIBLE_NOCOLOR
-- name: testing ansi escape sequences
-  hosts: localhost
-  gather_facts: no
+- hosts: localhost
+  gather_facts: true
   environment:
-    ANSIBLE_DEPRECATION_WARNINGS: 0
-    ANSIBLE_DEVEL_WARNING: 0
-    ANSIBLE_DOC_FRAGMENT_PLUGINS: "{{ playbook_dir }}/doc_fragments"
-    ANSIBLE_FORCE_COLOR: 0
     ANSIBLE_LIBRARY: "{{ playbook_dir }}/library"
-
+    ANSIBLE_NOCOLOR: 1
+    ANSIBLE_DEPRECATION_WARNINGS: 1
+    ANSIBLE_DOC_FRAGMENT_PLUGINS: "{{ playbook_dir }}/doc_fragments"
+  vars:
+    # avoid header that has full path and won't work across random paths for tests
+    actual_output_clean: '{{ actual_output.splitlines()[1:] }}'
+    expected_output_clean: '{{ expected_output.splitlines()[1:] }}'
   tasks:
     - name: create temporary file
       ansible.builtin.tempfile:
@@ -19,9 +19,16 @@
       ansible.builtin.shell: |
         ansible-doc test_docs &> {{ temp_file.path }}
       args:
-        executable: "/usr/bin/bash"
+        executable: "{{ ansible_user_shell }}"
+      environment:
+        ANSIBLE_DEPRECATION_WARNINGS: 0
+        ANSIBLE_DEVEL_WARNING: 0
+        ANSIBLE_DOC_FRAGMENT_PLUGINS: "{{ playbook_dir }}/doc_fragments"
+        ANSIBLE_FORCE_COLOR: 0
+        ANSIBLE_LIBRARY: "{{ playbook_dir }}/library"
+        ANSIBLE_NOCOLOR: 0
 
-    - name: assert redirect to file
+    - name: assert that file does not contain ansi escape sequences
       assert:
         that:
           - actual_output[0][:20] == "> MODULE test_docs ("
@@ -36,18 +43,6 @@
         path: "{{ temp_file.path }}"
         state: absent
 
-- hosts: localhost
-  gather_facts: no
-  environment:
-    ANSIBLE_LIBRARY: "{{ playbook_dir }}/library"
-    ANSIBLE_NOCOLOR: 1
-    ANSIBLE_DEPRECATION_WARNINGS: 1
-    ANSIBLE_DOC_FRAGMENT_PLUGINS: "{{ playbook_dir }}/doc_fragments"
-  vars:
-    # avoid header that has full path and won't work across random paths for tests
-    actual_output_clean: '{{ actual_output.splitlines()[1:] }}'
-    expected_output_clean: '{{ expected_output.splitlines()[1:] }}'
-  tasks:
     - name: module with missing description return docs
       command: ansible-doc test_docs_missing_description
       register: result
